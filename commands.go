@@ -7,56 +7,70 @@ import (
 	"time"
 )
 
-func AutoAdvance() {
-	config := GetConfig()
-	status := GetStatus()
+type Commands struct {
+	Config
+	Status
+}
 
-	if status.Ancient() {
-		ResetStatus()
-	} else if status.Expired(config) {
-		switch status.State {
+func (cmd Commands) minutesLeft() float64 {
+	switch cmd.State {
+	case Work:
+		return float64(cmd.WorkSessionMinutes) - cmd.MinutesElapsed()
+	case ShortBreak:
+		return float64(cmd.ShortBreakMinutes) - cmd.MinutesElapsed()
+	case LongBreak:
+		return float64(cmd.LongBreakMinutes) - cmd.MinutesElapsed()
+	}
+
+	return 0.0
+}
+
+func (cmd Commands) expired() bool {
+	return cmd.minutesLeft() <= 0.0
+}
+
+func (cmd *Commands) AutoAdvance() {
+	if cmd.Status.Ancient() {
+		cmd.ResetStatus()
+	} else if cmd.expired() {
+		switch cmd.State {
 		case Work:
-			StartBreak()
+			cmd.StartBreak()
 		case ShortBreak:
-			StartWorkSession()
+			cmd.StartWorkSession()
 		case LongBreak:
-			StartWorkSession()
+			cmd.StartWorkSession()
 		}
 	}
 }
 
-func DisplayStatus() {
-	config := GetConfig()
-	status := GetStatus()
-
-	minutesLeft := status.MinutesLeft(config)
+func (cmd Commands) DisplayStatus() {
+	minutesLeft := cmd.minutesLeft()
 
 	if minutesLeft <= 0 {
-		if status.State == Work {
+		if cmd.State == Work {
 			fmt.Println("Time to take a break!")
 		} else {
 			fmt.Println("Back to work!")
 		}
 	}
 
-	switch status.State {
+	switch cmd.State {
 	case Work:
-		fmt.Printf("Working (%.1f minutes remaining)\n", status.MinutesLeft(config))
+		fmt.Printf("Working (%.1f minutes remaining)\n", minutesLeft)
 	case ShortBreak:
-		fmt.Printf("Short break (%.1f minutes remaining)\n", status.MinutesLeft(config))
+		fmt.Printf("Short break (%.1f minutes remaining)\n", minutesLeft)
 	case LongBreak:
-		fmt.Printf("Long break (%.1f minutes remaining)\n", status.MinutesLeft(config))
+		fmt.Printf("Long break (%.1f minutes remaining)\n", minutesLeft)
 	}
 }
 
-func ResetStatus() {
-	status := DefaultStatus()
+func (cmd *Commands) ResetStatus() {
+	cmd.SessionCount = 0
+	cmd.State = Work
+	cmd.Started = time.Now()
 
-	status.SessionCount = 0
-	status.State = Work
-	status.Started = time.Now()
-
-	SaveStatus(status)
+	SaveStatus(cmd.Status)
 }
 
 func configInt(val string) int {
@@ -66,107 +80,93 @@ func configInt(val string) int {
 	return int(i)
 }
 
-func SetConfig(key, val string) {
-	config := GetConfig()
-
+func (cmd *Commands) SetConfig(key, val string) {
 	switch key {
 	case "WorkSessionMinutes":
-		config.WorkSessionMinutes = configInt(val)
+		cmd.WorkSessionMinutes = configInt(val)
 	case "ShortBreakMinutes":
-		config.ShortBreakMinutes = configInt(val)
+		cmd.ShortBreakMinutes = configInt(val)
 	case "LongBreakMinutes":
-		config.LongBreakMinutes = configInt(val)
+		cmd.LongBreakMinutes = configInt(val)
 	case "LongBreakInterval":
-		config.LongBreakInterval = configInt(val)
+		cmd.LongBreakInterval = configInt(val)
 	default:
 		fmt.Fprintln(os.Stderr, "ERROR: Unrecognized config key:", key)
 		os.Exit(1)
 	}
 
-	SaveConfig(config)
+	SaveConfig(cmd.Config)
 }
 
-func ShowAllConfig() {
-	config := GetConfig()
-	fmt.Println(config)
+func (cmd Commands) ShowAllConfig() {
+	cmd.Config.Write(os.Stdout)
 }
 
-func ShowConfig(key string) {
-	config := GetConfig()
-
+func (cmd Commands) ShowConfig(key string) {
 	switch key {
 	case "WorkSessionMinutes":
-		fmt.Println(config.WorkSessionMinutes)
+		fmt.Println(cmd.WorkSessionMinutes)
 	case "ShortBreakMinutes":
-		fmt.Println(config.ShortBreakMinutes)
+		fmt.Println(cmd.ShortBreakMinutes)
 	case "LongBreakMinutes":
-		fmt.Println(config.LongBreakMinutes)
+		fmt.Println(cmd.LongBreakMinutes)
 	case "LongBreakInterval":
-		fmt.Println(config.LongBreakInterval)
+		fmt.Println(cmd.LongBreakInterval)
 	default:
 		fmt.Fprintln(os.Stderr, "ERROR: Unrecognized config key:", key)
 		os.Exit(1)
 	}
 }
 
-func StartBreak() {
-	status := GetStatus()
-	config := GetConfig()
-
-	switch status.State {
+func (cmd *Commands) StartBreak() {
+	switch cmd.State {
 	case Work:
-		if status.SessionCount >= config.LongBreakInterval {
-			StartLongBreak()
+		if cmd.SessionCount >= cmd.LongBreakInterval {
+			cmd.StartLongBreak()
 		} else {
-			StartShortBreak()
+			cmd.StartShortBreak()
 		}
 	case ShortBreak, LongBreak:
 		// Do nothing
 	}
 }
 
-func StartLongBreak() {
-	status := GetStatus()
-
-	switch status.State {
+func (cmd *Commands) StartLongBreak() {
+	switch cmd.State {
 	case Work, ShortBreak:
-		status.State = LongBreak
-		status.Started = time.Now()
+		cmd.State = LongBreak
+		cmd.Started = time.Now()
 	case LongBreak:
 		// Do nothing
 	}
 
-	SaveStatus(status)
+	SaveStatus(cmd.Status)
 }
 
-func StartShortBreak() {
-	status := GetStatus()
-
-	switch status.State {
+func (cmd *Commands) StartShortBreak() {
+	switch cmd.State {
 	case Work, LongBreak:
-		status.State = ShortBreak
-		status.Started = time.Now()
+		cmd.State = ShortBreak
+		cmd.Started = time.Now()
 	case ShortBreak:
 		// Do nothing
 	}
 
-	SaveStatus(status)
+	SaveStatus(cmd.Status)
 }
 
-func StartWorkSession() {
-	status := GetStatus()
-
-	switch status.State {
+func (cmd *Commands) StartWorkSession() {
+	switch cmd.State {
 	case Work:
 		// Do nothing
 	case ShortBreak:
-		status.State = Work
-		status.Started = time.Now()
-		status.SessionCount += 1
+		cmd.State = Work
+		cmd.Started = time.Now()
+		cmd.SessionCount += 1
 	case LongBreak:
-		status.State = Work
-		status.SessionCount = 0
+		cmd.State = Work
+		cmd.SessionCount = 0
 	}
 
-	SaveStatus(status)
+	SaveStatus(cmd.Status)
 }

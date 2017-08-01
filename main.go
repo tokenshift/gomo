@@ -26,31 +26,38 @@ var (
 )
 
 func main() {
+	var cmd Commands
+	cmd.Config = GetConfig()
+	cmd.Status = GetStatus()
+
 	switch kingpin.MustParse(app.Parse(os.Args[1:])) {
 	case breakCmd.FullCommand():
 		if *breakLong {
-			StartLongBreak()
+			cmd.StartLongBreak()
 		} else {
-			StartBreak()
+			cmd.StartBreak()
 		}
+		cmd.DisplayStatus()
 	case configCmd.FullCommand():
-		if configKey == nil {
-			ShowAllConfig()
-		} else if configVal == nil {
-			ShowConfig(*configKey)
+		if *configKey == "" {
+			cmd.ShowAllConfig()
+		} else if *configVal == "" {
+			cmd.ShowConfig(*configKey)
 		} else {
-			SetConfig(*configKey, *configVal)
+			cmd.SetConfig(*configKey, *configVal)
 		}
 	case restartCmd.FullCommand():
-		ResetStatus()
-		StartWorkSession()
+		cmd.ResetStatus()
+		cmd.StartWorkSession()
+		cmd.DisplayStatus()
 	case statusCmd.FullCommand():
 		if *statusAuto {
-			AutoAdvance()
+			cmd.AutoAdvance()
 		}
-		DisplayStatus()
+		cmd.DisplayStatus()
 	case workCmd.FullCommand():
-		StartWorkSession()
+		cmd.StartWorkSession()
+		cmd.DisplayStatus()
 	}
 }
 

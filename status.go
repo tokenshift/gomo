@@ -69,25 +69,8 @@ func SaveStatus(status Status) {
 	checkFatal(err)
 }
 
-func (status Status) Expired(config Config) bool {
-	return status.MinutesLeft(config) <= 0.0
-}
-
 func (status Status) MinutesElapsed() float64 {
 	return time.Now().Sub(status.Started).Minutes()
-}
-
-func (status Status) MinutesLeft(config Config) float64 {
-	switch status.State {
-	case Work:
-		return float64(config.WorkSessionMinutes) - status.MinutesElapsed()
-	case ShortBreak:
-		return float64(config.ShortBreakMinutes) - status.MinutesElapsed()
-	case LongBreak:
-		return float64(config.LongBreakMinutes) - status.MinutesElapsed()
-	}
-
-	return 0.0
 }
 
 func (status Status) Ancient() bool {

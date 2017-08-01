@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 
@@ -60,4 +61,9 @@ func SaveConfig(config Config) {
 	encoder := toml.NewEncoder(f)
 	err = encoder.Encode(config)
 	checkFatal(err)
+}
+
+func (config Config) Write(out io.Writer) {
+	encoder := toml.NewEncoder(out)
+	encoder.Encode(config)
 }
