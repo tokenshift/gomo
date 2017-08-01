@@ -165,6 +165,7 @@ func (cmd *Commands) StartWorkSession() {
 		cmd.SessionCount += 1
 	case LongBreak:
 		cmd.State = Work
+		cmd.Started = time.Now()
 		cmd.SessionCount = 0
 	}
 
