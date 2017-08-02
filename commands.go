@@ -9,6 +9,7 @@ import (
 
 type Commands struct {
 	Config
+	History
 	Status
 }
 
@@ -71,6 +72,7 @@ func (cmd *Commands) ResetStatus() {
 	cmd.Started = time.Now()
 
 	SaveStatus(cmd.Status)
+	cmd.AddLogEntry("Reset")
 }
 
 func configInt(val string) int {
@@ -134,6 +136,7 @@ func (cmd *Commands) StartBreak() {
 func (cmd *Commands) StartLongBreak() {
 	switch cmd.State {
 	case Work, ShortBreak:
+		cmd.AddLogEntry(fmt.Sprintf("%s -> %s", cmd.State, LongBreak))
 		cmd.State = LongBreak
 		cmd.Started = time.Now()
 	case LongBreak:
@@ -146,6 +149,7 @@ func (cmd *Commands) StartLongBreak() {
 func (cmd *Commands) StartShortBreak() {
 	switch cmd.State {
 	case Work, LongBreak:
+		cmd.AddLogEntry(fmt.Sprintf("%s -> %s", cmd.State, ShortBreak))
 		cmd.State = ShortBreak
 		cmd.Started = time.Now()
 	case ShortBreak:
@@ -160,10 +164,12 @@ func (cmd *Commands) StartWorkSession() {
 	case Work:
 		// Do nothing
 	case ShortBreak:
+		cmd.AddLogEntry(fmt.Sprintf("%s -> %s", cmd.State, Work))
 		cmd.State = Work
 		cmd.Started = time.Now()
 		cmd.SessionCount += 1
 	case LongBreak:
+		cmd.AddLogEntry(fmt.Sprintf("%s -> %s", cmd.State, Work))
 		cmd.State = Work
 		cmd.Started = time.Now()
 		cmd.SessionCount = 0
