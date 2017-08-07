@@ -3,9 +3,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	// "io"
-	// "os"
-	// "path/filepath"
+	"io"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -33,24 +31,31 @@ func (l Log) DisplayLog() {
 	checkFatal(err)
 	defer rows.Close()
 
-	var timestamp time.Time
-	var oldState, newState, message string
-	for rows.Next() {
-		err = rows.Scan(&timestamp, &oldState, &newState, &message)
-		checkFatal(err)
-		if message == "" {
-			fmt.Printf("%s %s -> %s\n",
-				timestamp.Format(time.RFC3339),
-				oldState,
-				newState)
-		} else {
-			fmt.Printf("%s %s -> %s: %s\n",
-				timestamp.Format(time.RFC3339),
-				oldState,
-				newState,
-				message)
+	WithPager(func(pipe io.WriteCloser) {
+		defer pipe.Close()
+
+		var timestamp time.Time
+		var oldState, newState, message string
+
+		for rows.Next() {
+			err = rows.Scan(&timestamp, &oldState, &newState, &message)
+			checkFatal(err)
+			if message == "" {
+				fmt.Fprintf(pipe,
+					"%s %s -> %s\n",
+					timestamp.Format(time.RFC3339),
+					oldState,
+					newState)
+			} else {
+				fmt.Fprintf(pipe,
+					"%s %s -> %s: %s\n",
+					timestamp.Format(time.RFC3339),
+					oldState,
+					newState,
+					message)
+			}
 		}
-	}
+	})
 }
 
 func applySchema(db *sql.DB) {
@@ -81,28 +86,3 @@ func logPath() string {
 
 	return path
 }
-
-// func timestamp() string {
-// 	return time.Now().Format(time.RFC3339)
-// }
-
-// func (h History) AddLogEntry(logEntry string) {
-// 	err := os.MkdirAll(filepath.Dir(historyPath()), os.ModePerm)
-// 	checkFatal(err)
-
-// 	f, err := os.OpenFile(historyPath(), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-// 	checkFatal(err)
-// 	defer f.Close()
-
-// 	fmt.Fprintln(f, timestamp(), logEntry)
-// }
-
-// func (h History) DisplayHistory() {
-// 	f, err := os.Open(historyPath())
-// 	if err == nil {
-// 		defer f.Close()
-// 		io.Copy(os.Stdout, f)
-// 	} else if !os.IsNotExist(err) {
-// 		checkFatal(err)
-// 	}
-// }
