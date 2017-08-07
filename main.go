@@ -17,10 +17,8 @@ var (
 	configKey = configCmd.Arg("key", "Name of the config value to get/set.").String()
 	configVal = configCmd.Arg("value", "The new value to set.").String()
 
-	historyCmd = app.Command("history", "Display an activity log.")
-
-	logCmd   = app.Command("log", "Log an activity/event.")
-	logEntry = logCmd.Arg("entry", "Text of the logged event.").Required().String()
+	logCmd     = app.Command("log", "View or add to the activity log.")
+	logMessage = logCmd.Arg("message", "Text to add to the activity log.").String()
 
 	restartCmd = app.Command("restart", "Start a new work session and restart all counters.")
 
@@ -33,7 +31,7 @@ var (
 func main() {
 	var cmd Commands
 	cmd.Config = GetConfig()
-	cmd.History = History{}
+	cmd.Log = Log{}
 	cmd.Status = GetStatus()
 
 	switch kingpin.MustParse(app.Parse(os.Args[1:])) {
@@ -52,10 +50,12 @@ func main() {
 		} else {
 			cmd.SetConfig(*configKey, *configVal)
 		}
-	case historyCmd.FullCommand():
-		cmd.DisplayHistory()
 	case logCmd.FullCommand():
-		cmd.AddLogEntry(*logEntry)
+		if *logMessage == "" {
+			cmd.DisplayLog()
+		} else {
+			cmd.AddLogEntry(cmd.State, cmd.State, *logMessage)
+		}
 	case restartCmd.FullCommand():
 		cmd.ResetStatus()
 		cmd.StartWorkSession()
