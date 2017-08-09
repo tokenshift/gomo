@@ -19,6 +19,7 @@ var (
 
 	logCmd     = app.Command("log", "View or add to the activity log.")
 	logMessage = logCmd.Arg("message", "Text to add to the activity log.").String()
+	logToday   = logCmd.Flag("today", "Display only logs from today.").Short('t').Bool()
 
 	restartCmd = app.Command("restart", "Start a new work session and restart all counters.")
 
@@ -52,7 +53,7 @@ func main() {
 		}
 	case logCmd.FullCommand():
 		if *logMessage == "" {
-			cmd.DisplayLog()
+			cmd.DisplayLog(*logToday)
 		} else {
 			cmd.AddLogEntry(cmd.State, cmd.State, *logMessage)
 		}

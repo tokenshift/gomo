@@ -24,10 +24,23 @@ func (l Log) AddLogEntry(oldState, newState State, message string) {
 	checkFatal(err)
 }
 
-func (l Log) DisplayLog() {
+func (l Log) DisplayLog(today bool) {
 	db := getLogDb()
 
-	rows, err := db.Query(`SELECT * FROM log_entries ORDER BY timestamp DESC`)
+	var rows *sql.Rows
+	var err error
+
+	if today {
+		rows, err = db.Query(`
+			SELECT * FROM log_entries
+			WHERE date(timestamp) = date('now')
+			ORDER BY timestamp DESC`)
+	} else {
+		rows, err = db.Query(`
+			SELECT * FROM log_entries
+			ORDER BY timestamp DESC`)
+	}
+
 	checkFatal(err)
 	defer rows.Close()
 
