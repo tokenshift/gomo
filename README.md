@@ -5,11 +5,11 @@ Command-line pomodoro application.
 ## Install
 
 ```
-go get github.com/tokenshift/gomodoro
-go install github.com/tokenshift/gomodoro
+go get github.com/tokenshift/gomo
+go install github.com/tokenshift/gomo
 ```
 
-Or download a pre-packaged binary at https://github.com/tokenshift/gomodoro/releases.
+Or download a pre-packaged binary at https://github.com/tokenshift/gomo/releases.
 
 ## Use
 
