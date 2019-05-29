@@ -1,2 +1,4 @@
 /gomo.*
 gomo
+.DS_Store
+target/
