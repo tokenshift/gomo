@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/alecthomas/kingpin"
 )
@@ -38,9 +39,9 @@ func main() {
 	switch kingpin.MustParse(app.Parse(os.Args[1:])) {
 	case breakCmd.FullCommand():
 		if *breakLong {
-			cmd.StartLongBreak()
+			cmd.StartLongBreak(time.Now())
 		} else {
-			cmd.StartBreak()
+			cmd.StartBreak(time.Now())
 		}
 		cmd.DisplayStatus()
 	case configCmd.FullCommand():
@@ -55,11 +56,11 @@ func main() {
 		if *logMessage == "" {
 			cmd.DisplayLog(*logToday)
 		} else {
-			cmd.AddLogEntry(cmd.State, cmd.State, *logMessage)
+			cmd.AddLogEntry(time.Now(), cmd.State, cmd.State, *logMessage)
 		}
 	case restartCmd.FullCommand():
 		cmd.ResetStatus()
-		cmd.StartWorkSession()
+		cmd.StartWorkSession(time.Now())
 		cmd.DisplayStatus()
 	case statusCmd.FullCommand():
 		if *statusAuto {
@@ -67,7 +68,7 @@ func main() {
 		}
 		cmd.DisplayStatus()
 	case workCmd.FullCommand():
-		cmd.StartWorkSession()
+		cmd.StartWorkSession(time.Now())
 		cmd.DisplayStatus()
 	}
 }

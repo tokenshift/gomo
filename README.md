@@ -53,9 +53,16 @@ edit your configuration by using the `gomo config` command, or by editing
 
 * `WorkSessionMinutes`  
   How long each work session is (default: 25).
+* `WorkSessionRound`  
+  Round the start of the work session to the closest N minutes (default: 5).  
+  Set to -1 to not round.
 * `ShortBreakMinutes`  
   How long a short break is (default: 5).
+* `ShortBreakRound`  
+  As `WorkSessionRound` (default: 1).
 * `LongBreakMinutes`  
   How long a long break is (default: 15).
+* `LongBreakRound`  
+  As `WorkSessionRound` (default: 1).
 * `LongBreakInterval`  
   How many work sessions between each long break (default: 4).

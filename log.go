@@ -14,13 +14,13 @@ type Log struct{}
 
 const LogPath = "~/.gomo/history.sqlite3"
 
-func (l Log) AddLogEntry(oldState, newState State, message string) {
+func (l Log) AddLogEntry(t time.Time, oldState, newState State, message string) {
 	db := getLogDb()
 
 	stmt, err := db.Prepare(`INSERT INTO log_entries VALUES (?, ?, ?, ?)`)
 	checkFatal(err)
 
-	_, err = stmt.Exec(time.Now(), string(oldState), string(newState), message)
+	_, err = stmt.Exec(t, string(oldState), string(newState), message)
 	checkFatal(err)
 }
 

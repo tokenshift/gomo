@@ -21,6 +21,7 @@ const (
 	Work       State = "WORK"
 	ShortBreak       = "SHORT_BREAK"
 	LongBreak        = "LONG_BREAK"
+	None             = "NONE"
 )
 
 const StatusPath = "~/.gomo/status"
@@ -35,7 +36,7 @@ func statusPath() string {
 func DefaultStatus() Status {
 	return Status{
 		SessionCount: 0,
-		State:        Work,
+		State:        None,
 		Started:      time.Now(),
 	}
 }
@@ -47,7 +48,7 @@ func GetStatus() Status {
 	if err != nil {
 		if os.IsNotExist(err) {
 			status = DefaultStatus()
-			SaveStatus(status)
+			//SaveStatus(status)
 		} else {
 			checkFatal(err)
 		}

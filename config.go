@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/BurntSushi/toml"
 	"github.com/mitchellh/go-homedir"
@@ -11,8 +13,11 @@ import (
 
 type Config struct {
 	WorkSessionMinutes int
+	WorkSessionRound   int
 	ShortBreakMinutes  int
+	ShortBreakRound    int
 	LongBreakMinutes   int
+	LongBreakRound     int
 	LongBreakInterval  int
 }
 
@@ -28,8 +33,11 @@ func configPath() string {
 func DefaultConfig() Config {
 	return Config{
 		WorkSessionMinutes: 25,
+		WorkSessionRound:   5,
 		ShortBreakMinutes:  5,
+		ShortBreakRound:    1,
 		LongBreakMinutes:   15,
+		LongBreakRound:     1,
 		LongBreakInterval:  4,
 	}
 }
@@ -66,4 +74,25 @@ func SaveConfig(config Config) {
 func (config Config) Write(out io.Writer) {
 	encoder := toml.NewEncoder(out)
 	encoder.Encode(config)
+}
+
+func toDuration(minutes int) time.Duration {
+	dur, err := time.ParseDuration(fmt.Sprintf("%dm", minutes))
+	if err != nil {
+		panic(err)
+	}
+
+	return dur
+}
+
+func (config Config) WorkSessionDuration() time.Duration {
+	return toDuration(config.WorkSessionMinutes)
+}
+
+func (config Config) LongBreakDuration() time.Duration {
+	return toDuration(config.LongBreakMinutes)
+}
+
+func (config Config) ShortBreakDuration() time.Duration {
+	return toDuration(config.ShortBreakMinutes)
 }

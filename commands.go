@@ -31,16 +31,26 @@ func (cmd Commands) expired() bool {
 }
 
 func (cmd *Commands) AutoAdvance() {
-	if cmd.Status.Ancient() {
+	if cmd.State == None || cmd.Status.Ancient() {
 		cmd.ResetStatus()
-	} else if cmd.expired() {
+	} else {
+		for cmd.expired() {
+			cmd.autoAdvance1()
+		}
+	}
+}
+
+func (cmd *Commands) autoAdvance1() {
+	if cmd.expired() {
 		switch cmd.State {
 		case Work:
-			cmd.StartBreak()
+			cmd.StartBreak(cmd.Started.Add(cmd.WorkSessionDuration()))
 		case ShortBreak:
-			cmd.StartWorkSession()
+			cmd.StartWorkSession(cmd.Started.Add(cmd.ShortBreakDuration()))
 		case LongBreak:
-			cmd.StartWorkSession()
+			cmd.StartWorkSession(cmd.Started.Add(cmd.LongBreakDuration()))
+		case None:
+			cmd.StartWorkSession(time.Now())
 		}
 	}
 }
@@ -63,18 +73,20 @@ func (cmd Commands) DisplayStatus() {
 		fmt.Printf("Short break (%.1f minutes remaining)\n", minutesLeft)
 	case LongBreak:
 		fmt.Printf("Long break (%.1f minutes remaining)\n", minutesLeft)
+	case None:
+		fmt.Printf("No active pomodoro\n")
 	}
 }
 
 func (cmd *Commands) ResetStatus() {
-	oldState := cmd.State
+	start := round(time.Now(), cmd.WorkSessionRound)
 
-	cmd.SessionCount = 0
+	cmd.SessionCount = 1
 	cmd.State = Work
-	cmd.Started = time.Now()
+	cmd.Started = start
 
 	SaveStatus(cmd.Status)
-	cmd.AddLogEntry(oldState, cmd.State, "Reset")
+	cmd.AddLogEntry(start, "", cmd.State, "Reset")
 }
 
 func configInt(val string) int {
@@ -88,10 +100,16 @@ func (cmd *Commands) SetConfig(key, val string) {
 	switch key {
 	case "WorkSessionMinutes":
 		cmd.WorkSessionMinutes = configInt(val)
+	case "WorkSessionRound":
+		cmd.WorkSessionRound = configInt(val)
 	case "ShortBreakMinutes":
 		cmd.ShortBreakMinutes = configInt(val)
+	case "ShortBreakRound":
+		cmd.ShortBreakRound = configInt(val)
 	case "LongBreakMinutes":
 		cmd.LongBreakMinutes = configInt(val)
+	case "LongBreakRound":
+		cmd.LongBreakRound = configInt(val)
 	case "LongBreakInterval":
 		cmd.LongBreakInterval = configInt(val)
 	default:
@@ -110,10 +128,16 @@ func (cmd Commands) ShowConfig(key string) {
 	switch key {
 	case "WorkSessionMinutes":
 		fmt.Println(cmd.WorkSessionMinutes)
+	case "WorkSessionRound":
+		fmt.Println(cmd.WorkSessionRound)
 	case "ShortBreakMinutes":
 		fmt.Println(cmd.ShortBreakMinutes)
+	case "ShortBreakRound":
+		fmt.Println(cmd.ShortBreakRound)
 	case "LongBreakMinutes":
 		fmt.Println(cmd.LongBreakMinutes)
+	case "LongBreakRound":
+		fmt.Println(cmd.LongBreakRound)
 	case "LongBreakInterval":
 		fmt.Println(cmd.LongBreakInterval)
 	default:
@@ -122,25 +146,29 @@ func (cmd Commands) ShowConfig(key string) {
 	}
 }
 
-func (cmd *Commands) StartBreak() {
+func (cmd *Commands) StartBreak(t time.Time) {
 	switch cmd.State {
 	case Work:
 		if cmd.SessionCount >= cmd.LongBreakInterval {
-			cmd.StartLongBreak()
+			cmd.StartLongBreak(t)
 		} else {
-			cmd.StartShortBreak()
+			cmd.StartShortBreak(t)
 		}
+	case None:
+		cmd.StartShortBreak(t)
 	case ShortBreak, LongBreak:
 		// Do nothing
 	}
 }
 
-func (cmd *Commands) StartLongBreak() {
+func (cmd *Commands) StartLongBreak(t time.Time) {
+	t = round(t, cmd.LongBreakRound)
+
 	switch cmd.State {
-	case Work, ShortBreak:
-		cmd.AddLogEntry(cmd.State, LongBreak, "")
+	case Work, ShortBreak, None:
+		cmd.AddLogEntry(t, cmd.State, LongBreak, "")
 		cmd.State = LongBreak
-		cmd.Started = time.Now()
+		cmd.Started = t
 	case LongBreak:
 		// Do nothing
 	}
@@ -148,12 +176,14 @@ func (cmd *Commands) StartLongBreak() {
 	SaveStatus(cmd.Status)
 }
 
-func (cmd *Commands) StartShortBreak() {
+func (cmd *Commands) StartShortBreak(t time.Time) {
+	t = round(t, cmd.ShortBreakRound)
+
 	switch cmd.State {
-	case Work, LongBreak:
-		cmd.AddLogEntry(cmd.State, ShortBreak, "")
+	case Work, LongBreak, None:
+		cmd.AddLogEntry(t, cmd.State, ShortBreak, "")
 		cmd.State = ShortBreak
-		cmd.Started = time.Now()
+		cmd.Started = t
 	case ShortBreak:
 		// Do nothing
 	}
@@ -161,20 +191,22 @@ func (cmd *Commands) StartShortBreak() {
 	SaveStatus(cmd.Status)
 }
 
-func (cmd *Commands) StartWorkSession() {
+func (cmd *Commands) StartWorkSession(t time.Time) {
+	t = round(t, cmd.WorkSessionRound)
+
 	switch cmd.State {
 	case Work:
 		// Do nothing
 	case ShortBreak:
-		cmd.AddLogEntry(cmd.State, Work, "")
+		cmd.AddLogEntry(t, cmd.State, Work, "")
 		cmd.State = Work
-		cmd.Started = time.Now()
+		cmd.Started = t
 		cmd.SessionCount += 1
-	case LongBreak:
-		cmd.AddLogEntry(cmd.State, Work, "")
+	case LongBreak, None:
+		cmd.AddLogEntry(t, cmd.State, Work, "")
 		cmd.State = Work
-		cmd.Started = time.Now()
-		cmd.SessionCount = 0
+		cmd.Started = t
+		cmd.SessionCount = 1
 	}
 
 	SaveStatus(cmd.Status)
